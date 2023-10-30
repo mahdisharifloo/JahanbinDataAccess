@@ -88,3 +88,10 @@ async def sunburst_end_point(charts_time_filter=None,
                              current_user: User = Depends(get_current_active_user)):
     data = ops.get_sunburst_chart_data(charts_time_filter)
     return data
+
+
+@router.get("/instagram/rule_base_info_service", tags=["Instagram"])
+async def rule_base_info_service_end_point(caption=None,
+                             current_user: User = Depends(get_current_active_user)):
+    data = ops.get_rule_base_info_service_tag(caption)
+    return data

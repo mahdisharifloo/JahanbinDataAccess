@@ -4,7 +4,9 @@ import pymongo
 from bson.objectid import ObjectId
 from datetime import datetime, timedelta, date
 from persiantools.jdatetime import JalaliDate
-import random 
+import random
+import requests
+from collections import Counter
 
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, root_path)
@@ -28,11 +30,28 @@ def get_random_data(generation_rate:int, down_limit:int, up_limit:int):
     return data
 
 
+def get_category(caption):
+    url = "http://94.182.215.123:10034/category"
+    querystring = {"prompt": caption}
+    payload = ""
+    headers = {"accept": "application/json"}
+    response = requests.request("POST", url, data=payload, headers=headers, params=querystring)
+    resp = response.text
+    resp = resp.replace('"','')
+    return resp
+
+# class BaseRules:
+#     def __init__(self):
+#         self.knowledge_base = [
+#             {"word": "سرباز","do": ""}
+#         ]
+#     def check_with_knowledge_base(self,caption):
+#         return caption
 
 class BaseOps:
     def __init__(self, post_model) -> None:
         self.post_model = post_model
-
+        # self.rules = BaseRules()
     def get_records(self, sentiment='', category='',
                     inteligence_service_category='',
                     time_filtering="6m", count=10):
@@ -316,6 +335,47 @@ class BaseOps:
                 ]}))
         data = str(data)
         return data
+
+    def get_rule_base_info_service_tag(self, caption):
+        category = get_category(caption)
+        decisions = {
+            1: "مسائل مالی و تجهیزات",
+            2: "مسائل عقیدتی و نظامی",
+            3: "تحریک و اعتراض کارکنان",
+            4: "مسائل مدیریتی و اعتمادزدایی",
+            5: "تضادها و اختلاف‌ها",
+            6: "اقدام خودی"
+        }
+        decisions_makes = []
+        valid_categories = [
+            "اجتماعی",
+            "سیاسی",
+            "اقتصادی"
+        ]
+        eghdam_khody = [
+            "معاون اجرایی", "شناسایی و دستگیری", "نیروهای مسلح", "نیروی مسلح", "امام حسین", "امام خمینی", "فرمودند",
+            "رسول اکرم", "آیت", "حضرت آیت الله", "رهبری",
+            "نداجا", "نزاجا", "شبکه های اجتماعی", "انقلاب اسلامی", "حضرت", "التماس", "اللهم", "جمهوری اسلامی ایران",
+            "رزمایش", "سپاه پاسداران", "مقام معظم",
+            "بیانات"
+        ]
+        mokhalef = [
+            "نترسید", "وابسته به سپاه", " وابسته به دولت",
+            "مزدور", "مواد", "جنس", "اخوند", "آخوند", "وطن پرست", "سرکوب", "شاه",
+        ]
+        if not category:
+            return None
+        if category == valid_categories[2]:
+            return decisions[1]
+        if 'سرباز' in caption and category in valid_categories:
+            return decisions[4]
+        for item in mokhalef:
+            if item in caption:
+                return decisions[3]
+        for item in eghdam_khody:
+            if item in caption:
+                return decisions[6]
+
 
 class InstagramOps(BaseOps):
     def __init__(self) -> None:

@@ -88,3 +88,9 @@ async def last_news_end_point(count=5,
                             ):
     data = ops.last_news(count)
     return {"news": data}
+
+@router.get("/twitter/rule_base_info_service", tags=["Twitter"])
+async def rule_base_info_service_end_point(caption=None,
+                             current_user: User = Depends(get_current_active_user)):
+    data = ops.get_rule_base_info_service_tag(caption)
+    return data
