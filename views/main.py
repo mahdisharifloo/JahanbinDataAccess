@@ -3,6 +3,7 @@ import sys
 import uvicorn
 from fastapi import FastAPI
 from starlette.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, root_path)
@@ -17,6 +18,21 @@ from views import login , instagram,twitter,telegram_channel,telegram_group,news
 
 log = Logger("access_api")
 app = FastAPI(title="JAHANBIN API")
+
+origins = [
+    "http://localhost",
+    "http://localhost:3000",
+    "https://localhost",
+    "https://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 tags_metadata = [
     {"name": "Instagram", "description": "Endpoints related to instagram"},
     {"name": "Twitter", "description": "Endpoints related to twitter"},
