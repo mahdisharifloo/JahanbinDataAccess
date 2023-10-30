@@ -19,12 +19,7 @@ from views import login , instagram,twitter,telegram_channel,telegram_group,news
 log = Logger("access_api")
 app = FastAPI(title="JAHANBIN API")
 
-origins = [
-    "http://localhost",
-    "http://localhost:3000",
-    "https://localhost",
-    "https://localhost:3000",
-]
+origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
