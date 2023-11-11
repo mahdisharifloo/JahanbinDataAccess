@@ -5,4 +5,8 @@ fastapi
 pymongo
 persiantools
 pytz
-pandas  
+pyjwt
+pydantic
+passlib
+python-multipart
+bcrypt

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, date
 from persiantools.jdatetime import JalaliDate
 import random
 import requests
-from collections import Counter
+import json
 
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, root_path)
@@ -17,10 +17,10 @@ from models.app import *
 def get_metadata(data):
     label = ','.join(list(data.keys()))
     value_data = ''.join([str(x)+',' for x in list(data.values())])[:-1]
-    return label , value_data
+    return label, value_data
 
 
-def get_random_data(generation_rate:int, down_limit:int, up_limit:int):
+def get_random_data(generation_rate: int, down_limit: int, up_limit: int):
     data = ''
     for i in range(generation_rate):
         if i < generation_rate-1:
@@ -31,14 +31,27 @@ def get_random_data(generation_rate:int, down_limit:int, up_limit:int):
 
 
 def get_category(caption):
-    url = "http://94.182.215.123:10034/category"
+    url = "http://94.182.215.116:10034/category"
     querystring = {"prompt": caption}
     payload = ""
     headers = {"accept": "application/json"}
-    response = requests.request("POST", url, data=payload, headers=headers, params=querystring)
+    response = requests.request(
+        "POST", url, data=payload, headers=headers, params=querystring)
     resp = response.text
-    resp = resp.replace('"','')
+    resp = resp.replace('"', '')
     return resp
+
+
+def get_sentiment(caption):
+    url = "http://94.182.215.116:10021/sentiment_analysis"
+    querystring = {"prompt": caption}
+    payload = ""
+    headers = {"accept": "application/json"}
+    response = requests.request(
+        "POST", url, data=payload, headers=headers, params=querystring)
+    resp = json.loads(response.text)
+    return resp[0]
+
 
 # class BaseRules:
 #     def __init__(self):
@@ -48,10 +61,12 @@ def get_category(caption):
 #     def check_with_knowledge_base(self,caption):
 #         return caption
 
+
 class BaseOps:
     def __init__(self, post_model) -> None:
         self.post_model = post_model
         # self.rules = BaseRules()
+
     def get_records(self, sentiment='', category='',
                     inteligence_service_category='',
                     time_filtering="6m", count=10):
@@ -95,7 +110,6 @@ class BaseOps:
             d['_id'] = str(d['_id'])
         return data
 
-
     def last_news(self, count=5):
         data_doc = self.post_model.collection.find(
             {"$and": [
@@ -121,54 +135,15 @@ class BaseOps:
         data['processed'] = {}
         data['junk'] = {}
         while date_ago <= today:
-                data['entry'][JalaliDate(date_ago).strftime("%B %Y %d")] = self.post_model.collection.count_documents({"$and":[
-                                                                        # {"sentiment":{"$in":["very_positive","positive"]}},
-                                                                        {"created_at":{"$gt":date_ago}},
-                                                                        {"created_at":{"$lte":date_ago + timedelta(days=space_days_range)}}
-                                                                    ]})
-                date_ago += timedelta(days=space_days_range)  
-        # date_ago = today - timedelta(days=365)
-        # while date_ago <= today:
-        #         data['processed'][JalaliDate(date_ago).strftime("%B %Y %d")] = self.post_model.collection.count_documents({"$and":[
-        #                                                                 {"ner":{"$ne":None}},
-        #                                                                 {"created_at":{"$gt":date_ago}},
-        #                                                                 {"created_at":{"$lte":date_ago + timedelta(days=30)}}
-        #                                                             ]})
-                
-        #         date_ago += timedelta(days=30)  
+            data['entry'][JalaliDate(date_ago).strftime("%B %Y %d")] = self.post_model.collection.count_documents({"$and": [
+                # {"sentiment":{"$in":["very_positive","positive"]}},
+                {"created_at": {"$gt": date_ago}},
+                {"created_at": {"$lte": date_ago + \
+                                timedelta(days=space_days_range)}}
+            ]})
+            date_ago += timedelta(days=space_days_range)
+        return data['entry']
 
-        # date_ago = today - timedelta(days=365)
-        # while date_ago <= today:
-        #         data['junk'][JalaliDate(date_ago).strftime("%B %Y %d")] = self.post_model.collection.count_documents({"$and":[
-        #                                                                 {"ner":[]},
-        #                                                                 {"created_at":{"$gt":date_ago}},
-        #                                                                 {"created_at":{"$lte":date_ago + timedelta(days=30)}}
-        #                                                             ]})
-                
-        #         date_ago += timedelta(days=30)  
-        data['processed'] = data['entry']
-        data['junk'] = data['entry']
-        label_chart11,data_chart11 = get_metadata(data['entry'])
-        label_chart12,data_chart12 = get_metadata(data['processed'])
-        label_chart13,data_chart13 = get_metadata(data['junk'])
-        label_chart2,data_chart2 = get_metadata(data['entry'])
-        label_chart3,data_chart3 = get_metadata(data['processed'])
-        label_chart4 =  "نیروی زمینی,نیروی هوایی,نیروی دریایی,ستاد مشترک,حفاظت اطلاعات"
-        data_chart4 = get_random_data(5,0,2000)
-        return {
-                "label_chart11":label_chart11,
-                "data_chart11":data_chart11,
-                "label_chart12":label_chart12,
-                "data_chart12":data_chart12,
-                "label_chart13":label_chart13,
-                "data_chart13":data_chart13,
-                "label_chart2":label_chart2,
-                "data_chart2":data_chart2,
-                "label_chart3":label_chart3,
-                "data_chart3":data_chart3,
-                "label_chart4":label_chart4,
-                "data_chart4":data_chart4,
-                }
 
     def get_news(self, page=1,
                  sentiment='',
@@ -327,17 +302,20 @@ class BaseOps:
                      'etemad_zodaei_modiriati', 'tazad_ekhtelaf', 'khodi', 'unknown']
         data = []
         for item in info_tags:
-            data.append(self.post_model.collection.count_documents(
+            data.append(
+                {item:self.post_model.collection.count_documents(
                 {"$and": [
                     {"created_at": {"$gt": today - timedelta(days=day_limit)}},
                     {"created_at": {"$lte": today}},
                     {"manual_info_service_tag": item},
-                ]}))
-        data = str(data)
+                ]})}
+                 )
+        # data = str(data)
         return data
 
     def get_rule_base_info_service_tag(self, caption):
         category = get_category(caption)
+        sentiment = get_sentiment(caption)
         decisions = {
             1: "مسائل مالی و تجهیزات",
             2: "مسائل عقیدتی و نظامی",
@@ -352,29 +330,31 @@ class BaseOps:
             "سیاسی",
             "اقتصادی"
         ]
-        eghdam_khody = [
-            "معاون اجرایی", "شناسایی و دستگیری", "نیروهای مسلح", "نیروی مسلح", "امام حسین", "امام خمینی", "فرمودند",
-            "رسول اکرم", "آیت", "حضرت آیت الله", "رهبری",
-            "نداجا", "نزاجا", "شبکه های اجتماعی", "انقلاب اسلامی", "حضرت", "التماس", "اللهم", "جمهوری اسلامی ایران",
-            "رزمایش", "سپاه پاسداران", "مقام معظم",
-            "بیانات"
-        ]
-        mokhalef = [
-            "نترسید", "وابسته به سپاه", " وابسته به دولت",
-            "مزدور", "مواد", "جنس", "اخوند", "آخوند", "وطن پرست", "سرکوب", "شاه",
-        ]
+        # eghdam_khody = [
+        #     "معاون اجرایی", "نیروهای مسلح", "نیروی مسلح", "امام حسین", "امام خمینی", "فرمودند",
+        #     "رسول اکرم", "آیت", "حضرت آیت الله", "رهبری",
+        #     "نداجا", "نزاجا", "شبکه های اجتماعی", "انقلاب اسلامی", "حضرت", "التماس", "اللهم", "جمهوری اسلامی ایران",
+        #     "رزمایش", "سپاه پاسداران", "مقام معظم",
+        #     "بیانات"
+        # ]
+        # mokhalef = [
+        #     "نترسید", "وابسته به سپاه", " وابسته به دولت",
+        #     "مزدور", "مواد", "جنس", "اخوند", "آخوند", "وطن پرست", "سرکوب", "شاه",
+        # ]
         if not category:
             return None
         if category == valid_categories[2]:
             return decisions[1]
-        if 'سرباز' in caption and category in valid_categories:
-            return decisions[4]
-        for item in mokhalef:
-            if item in caption:
-                return decisions[3]
-        for item in eghdam_khody:
-            if item in caption:
-                return decisions[6]
+        if sentiment in ['positive', "very positive", "mixed"]:
+            return decisions[6]
+        choice = random.choice([
+            "مسائل عقیدتی و نظامی",
+            "تحریک و اعتراض کارکنان",
+            "مسائل مدیریتی و اعتمادزدایی",
+            "تضادها و اختلاف‌ها"
+        ])
+        return choice
+
 
 
 class InstagramOps(BaseOps):
@@ -382,23 +362,26 @@ class InstagramOps(BaseOps):
         post_model = InstagramModel()
         super().__init__(post_model)
 
+
 class TwitterOps(BaseOps):
     def __init__(self) -> None:
         post_model = TwitterModel()
         super().__init__(post_model)
+
 
 class TelegramGroupOps(BaseOps):
     def __init__(self) -> None:
         post_model = TelegramGroupModel()
         super().__init__(post_model)
 
+
 class TelegramChannelOps(BaseOps):
     def __init__(self) -> None:
         post_model = TelegramChannelModel()
         super().__init__(post_model)
 
+
 class NewsAgencyOps(BaseOps):
     def __init__(self) -> None:
         post_model = NewsAgencyModel()
         super().__init__(post_model)
-

@@ -32,4 +32,4 @@ COPY ./ /code/
 
 
 #CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "2468"]
-CMD ["python","api/main.py"]
+CMD ["python","views/main.py"]
