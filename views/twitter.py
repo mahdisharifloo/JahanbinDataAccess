@@ -94,3 +94,9 @@ async def rule_base_info_service_end_point(caption=None,
                              current_user: User = Depends(get_current_active_user)):
     data = ops.get_rule_base_info_service_tag(caption)
     return data
+
+# @router.get("/twitter/get_tag_cload", tags=["Twitter"])
+# async def get_tag_cload_end_point(days_ago=30,
+#                              current_user: User = Depends(get_current_active_user)):
+#     data = ops.generate_word_frequencies(days_ago)
+#     return data

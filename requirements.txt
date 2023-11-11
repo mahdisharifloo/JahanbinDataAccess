@@ -10,3 +10,4 @@ pydantic
 passlib
 python-multipart
 bcrypt
+# wordcloud-fa
