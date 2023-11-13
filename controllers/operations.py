@@ -7,17 +7,17 @@ from persiantools.jdatetime import JalaliDate
 import random
 import requests
 import json
-# from wordcloud_fa import WordCloudFa
+from wordcloud_fa import WordCloudFa
 
-# wc = WordCloudFa(
-#     # font_path="components/Vazir-Thin.ttf",
-#     # mask=mask_array,
-#     persian_normalize=True,
-#     no_reshape=True,
-#     collocations=False,
-#     stopwords=set([]),
-#     # background_color='white',
-#     )
+wc = WordCloudFa(
+    # font_path="components/Vazir-Thin.ttf",
+    # mask=mask_array,
+    persian_normalize=True,
+    no_reshape=True,
+    collocations=False,
+    stopwords=set([]),
+    # background_color='white',
+    )
 
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, root_path)
@@ -366,31 +366,31 @@ class BaseOps:
         return choice
 
 
-    # def generate_word_frequencies(self,days_ago=30):
-    #     delta_blow = datetime.now() - timedelta(days=days_ago)
-    #     delta_head = datetime.now()
-    #     query = {"$and":[
-    #             {"ner":{"$nin":[None,[]]}},
-    #             {"created_at":{"$gt":delta_blow}},
-    #             {"created_at":{"$lte":delta_head}}
-    #             ]}
-    #     posts_iterator = self.post_model.collection.find(query)
-    #     data = [doc for doc in posts_iterator]
-    #     words = []
-    #     for d in data:
-    #         ner = d['ner']
-    #         for item in ner:
-    #             words.append(item['word'].replace(' ','-'))
-    #     text = ' '.join(words)
-    #     frequencies = wc.process_text(text)
-    #     out = []
-    #     for k,v in zip(frequencies.keys(),frequencies.values()):
-    #         record = {} 
-    #         if v > 10 and len(k)>2 and "#" not in k:
-    #             record['tag'] = k
-    #             record["value"] = v
-    #             out.append(record)
-    #     return out
+    def generate_word_frequencies(self,days_ago=30):
+        delta_blow = datetime.now() - timedelta(days=days_ago)
+        delta_head = datetime.now()
+        query = {"$and":[
+                {"ner":{"$nin":[None,[]]}},
+                {"created_at":{"$gt":delta_blow}},
+                {"created_at":{"$lte":delta_head}}
+                ]}
+        posts_iterator = self.post_model.collection.find(query)
+        data = [doc for doc in posts_iterator]
+        words = []
+        for d in data:
+            ner = d['ner']
+            for item in ner:
+                words.append(item['word'].replace(' ','-'))
+        text = ' '.join(words)
+        frequencies = wc.process_text(text)
+        out = []
+        for k,v in zip(frequencies.keys(),frequencies.values()):
+            record = {} 
+            if v > 10 and len(k)>2 and "#" not in k:
+                record['tag'] = k
+                record["value"] = v
+                out.append(record)
+        return out
 
 
 
