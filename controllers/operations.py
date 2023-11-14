@@ -9,6 +9,11 @@ import requests
 import json
 from wordcloud_fa import WordCloudFa
 
+root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, root_path)
+
+from models.app import *
+
 wc = WordCloudFa(
     # font_path="components/Vazir-Thin.ttf",
     # mask=mask_array,
@@ -17,12 +22,18 @@ wc = WordCloudFa(
     collocations=False,
     stopwords=set([]),
     # background_color='white',
-    )
+)
 
-root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, root_path)
 
-from models.app import *
+brian_mission = {
+    "mali_tajhizat": "بزرگنمایی مشکلات و نارسایی ها",
+    "nezami_aghidati": "القائ ضعف اعتقادی در آجا",
+    "tahrik_eteraz": "تحریک کارکنان و تشویش اذهان آنها",
+    "etemad_zodaei_modiriati": "بزرگنمایی مشکلات مدیریتی و اعتمادزدایی",
+    "tazad_ekhtelaf": "بزرگنمایی تضادها و اختلاف ها",
+    "khodi": "اقدام خودی",
+    "unknown": "نامشخص",
+}
 
 
 def get_metadata(data):
@@ -54,7 +65,7 @@ def get_category(caption):
 
 
 def get_sentiment(caption):
-    url = "http://94.182.215.116:10021/sentiment_analysis"
+    url = "http://94.182.215.116:10031/sentiment_analysis"
     querystring = {"prompt": caption}
     payload = ""
     headers = {"accept": "application/json"}
@@ -144,15 +155,15 @@ class BaseOps:
         data = []
         while date_ago <= today:
             data.append({
-                "name":JalaliDate(date_ago).strftime("%B %Y %d"),
+                "name": JalaliDate(date_ago).strftime("%B %Y %d"),
                 "value":  self.post_model.collection.count_documents({"$and": [
-                                    {"created_at": {"$gt": date_ago}},
-                                    {"created_at": {"$lte": date_ago + timedelta(days=space_days_range)}}
+                    {"created_at": {"$gt": date_ago}},
+                    {"created_at": {"$lte": date_ago +
+                                    timedelta(days=space_days_range)}}
                 ]})
             })
             date_ago += timedelta(days=space_days_range)
         return data
-
 
     def get_news(self, page=1,
                  sentiment='',
@@ -312,14 +323,15 @@ class BaseOps:
         data = []
         for item in info_tags:
             data.append(
-                {"name":item,
-                "value":self.post_model.collection.count_documents(
-                {"$and": [
-                    {"created_at": {"$gt": today - timedelta(days=day_limit)}},
-                    {"created_at": {"$lte": today}},
-                    {"manual_info_service_tag": item},
-                ]})}
-                 )
+                {"name": item,
+                 "value": self.post_model.collection.count_documents(
+                     {"$and": [
+                         {"created_at": {"$gt": today -
+                                         timedelta(days=day_limit)}},
+                         {"created_at": {"$lte": today}},
+                         {"manual_info_service_tag": item},
+                     ]})}
+            )
         # data = str(data)
         return data
 
@@ -327,11 +339,11 @@ class BaseOps:
         category = get_category(caption)
         sentiment = get_sentiment(caption)
         decisions = {
-            1: "مسائل مالی و تجهیزات",
-            2: "مسائل عقیدتی و نظامی",
-            3: "تحریک و اعتراض کارکنان",
-            4: "مسائل مدیریتی و اعتمادزدایی",
-            5: "تضادها و اختلاف‌ها",
+            1: "بزرگنمایی مشکلات و نارسایی ها",
+            2: "القائ ضعف اعتقادی در آجا",
+            3: "تحریک کارکنان و تشویش اذهان آنها",
+            4: "بزرگنمایی مشکلات مدیریتی و اعتمادزدایی",
+            5: "بزرگنمایی تضادها و اختلاف ها",
             6: "اقدام خودی"
         }
         decisions_makes = []
@@ -340,17 +352,6 @@ class BaseOps:
             "سیاسی",
             "اقتصادی"
         ]
-        # eghdam_khody = [
-        #     "معاون اجرایی", "نیروهای مسلح", "نیروی مسلح", "امام حسین", "امام خمینی", "فرمودند",
-        #     "رسول اکرم", "آیت", "حضرت آیت الله", "رهبری",
-        #     "نداجا", "نزاجا", "شبکه های اجتماعی", "انقلاب اسلامی", "حضرت", "التماس", "اللهم", "جمهوری اسلامی ایران",
-        #     "رزمایش", "سپاه پاسداران", "مقام معظم",
-        #     "بیانات"
-        # ]
-        # mokhalef = [
-        #     "نترسید", "وابسته به سپاه", " وابسته به دولت",
-        #     "مزدور", "مواد", "جنس", "اخوند", "آخوند", "وطن پرست", "سرکوب", "شاه",
-        # ]
         if not category:
             return None
         if category == valid_categories[2]:
@@ -358,40 +359,35 @@ class BaseOps:
         if sentiment in ['positive', "very positive", "mixed"]:
             return decisions[6]
         choice = random.choice([
-            "مسائل عقیدتی و نظامی",
-            "تحریک و اعتراض کارکنان",
-            "مسائل مدیریتی و اعتمادزدایی",
-            "تضادها و اختلاف‌ها"
+            decisions[1], decisions[2], decisions[3], decisions[4]
         ])
         return choice
 
-
-    def generate_word_frequencies(self,days_ago=30):
+    def generate_word_frequencies(self, days_ago=30):
         delta_blow = datetime.now() - timedelta(days=days_ago)
         delta_head = datetime.now()
-        query = {"$and":[
-                {"ner":{"$nin":[None,[]]}},
-                {"created_at":{"$gt":delta_blow}},
-                {"created_at":{"$lte":delta_head}}
-                ]}
+        query = {"$and": [
+                {"ner": {"$nin": [None, []]}},
+                {"created_at": {"$gt": delta_blow}},
+                {"created_at": {"$lte": delta_head}}
+        ]}
         posts_iterator = self.post_model.collection.find(query)
         data = [doc for doc in posts_iterator]
         words = []
         for d in data:
             ner = d['ner']
             for item in ner:
-                words.append(item['word'].replace(' ','-'))
+                words.append(item['word'].replace(' ', '-'))
         text = ' '.join(words)
         frequencies = wc.process_text(text)
         out = []
-        for k,v in zip(frequencies.keys(),frequencies.values()):
-            record = {} 
-            if v > 10 and len(k)>2 and "#" not in k:
-                record['tag'] = k
+        for k, v in zip(frequencies.keys(), frequencies.values()):
+            record = {}
+            if v > 10 and len(k) > 2 and "#" not in k:
+                record['text'] = k
                 record["value"] = v
                 out.append(record)
         return out
-
 
 
 class InstagramOps(BaseOps):
