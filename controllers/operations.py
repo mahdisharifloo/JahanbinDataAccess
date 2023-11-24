@@ -1,9 +1,12 @@
 import os
 import sys
 import pymongo
+import re 
 from bson.objectid import ObjectId
 from datetime import datetime, timedelta, date
 from persiantools.jdatetime import JalaliDate
+
+
 import random
 import requests
 import json
@@ -11,7 +14,6 @@ from wordcloud_fa import WordCloudFa
 
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, root_path)
-
 from models.app import *
 
 wc = WordCloudFa(
@@ -119,7 +121,7 @@ class BaseOps:
         today = datetime.combine(date.today(), datetime.min.time())
         data_doc = self.post_model.collection.find(
             {"$and": [
-                {"manual_info_service_tag": None},
+                {"information_service_tag": None},
                 {"created_at": {"$gt": today - timedelta(days=day_limit)}},
                 {"created_at": {"$lte": today}},
                 {"category": category},
@@ -144,7 +146,7 @@ class BaseOps:
 
     def add_info_service_tag(self, record_id, label):
         query = {"_id": ObjectId(record_id)}
-        data = {'manual_info_service_tag': label}
+        data = {'information_service_tag': label}
         self.post_model.update(query, data)
         return True
 
@@ -180,7 +182,7 @@ class BaseOps:
             category = {"$ne": None}
         if not inteligence_service_category:
             inteligence_service_category = {"$ne": None}
-        today = datetime.combine(date.today(), datetime.min.time())
+        today = datetime.combine(date.today(), datetime.min.time()) + timedelta(days=1)
 
         if time_filtering == "1d":
             day_limit = 1
@@ -225,16 +227,15 @@ class BaseOps:
                 {"url": f'/news/?page={next_page}', "number": next_page},
                 {"url": f'/news/?page={next_next_page}', "number": next_next_page}
             ]
-
-        data_doc = self.post_model.collection.find(
-            {"$and": [
+        query = {"$and": [
                 {"created_at": {"$gt": today - timedelta(days=day_limit)}},
                 {"created_at": {"$lte": today}},
                 {"category": category},
-                {"manual_info_service_tag": inteligence_service_category},
+                {"information_service_tag": inteligence_service_category},
                 {"sentiment": sentiment},
                 {"clean_context": {"$nin": [None, [], ""]}},
-            ]}).skip(down_range).limit(up_range).sort('created_at', pymongo.DESCENDING)
+            ]}
+        data_doc = self.post_model.collection.find(query).sort('created_at', pymongo.DESCENDING).skip(down_range).limit(up_range)
         data = [doc for doc in data_doc]
 
         for d in data:
@@ -312,25 +313,42 @@ class BaseOps:
     def get_sunburst_chart_data(self, charts_time_filter=None):
         today = datetime.combine(date.today(), datetime.min.time())
         if charts_time_filter:
-            filter_date = datetime.fromisoformat(charts_time_filter)
-            day_limit = today - filter_date
+            y,m,d = charts_time_filter.split("-")
+            if len(m) == 1:
+                m = '0'+m
+            if len(d) == 1:
+                d = '0'+d
+            
+            charts_time_filter = y+'-'+m+'-'+d + 'T00:00:00'
+            filter_date = JalaliDate.fromisoformat(charts_time_filter)
+            converted_filter_date = filter_date.to_gregorian()
+            converted_filter_datetime = datetime.combine(converted_filter_date, datetime.min.time())
+
+            day_limit = today - converted_filter_datetime
             day_limit = day_limit.days
 
         else:
             day_limit = 180
-        info_tags = ['mali_tajhizat', 'nezami_aghidati', 'tahrik_eteraz',
-                     'etemad_zodaei_modiriati', 'tazad_ekhtelaf', 'khodi', 'unknown']
+        info_tags = {
+            1: "بزرگنمایی مشکلات و نارسایی ها",
+            2: "القائ ضعف اعتقادی در آجا",
+            3: "تحریک کارکنان و تشویش اذهان آنها",
+            4: "بزرگنمایی مشکلات مدیریتی و اعتمادزدایی",
+            5: "بزرگنمایی تضادها و اختلاف ها",
+            6: "اقدام خودی"
+        }
         data = []
-        for item in info_tags:
+        for item in info_tags.values():
             data.append(
-                {"name": item,
-                 "value": self.post_model.collection.count_documents(
-                     {"$and": [
-                         {"created_at": {"$gt": today -
-                                         timedelta(days=day_limit)}},
-                         {"created_at": {"$lte": today}},
-                         {"manual_info_service_tag": item},
-                     ]})}
+                {
+                    "name": item,
+                    "value": self.post_model.collection.count_documents(
+                        {"$and": [
+                            {"created_at": {"$gt": today -
+                                            timedelta(days=day_limit)}},
+                            {"created_at": {"$lte": today}},
+                            {"information_service_tag": item},
+                        ]})}
             )
         # data = str(data)
         return data
@@ -359,7 +377,7 @@ class BaseOps:
         if sentiment in ['positive', "very positive", "mixed"]:
             return decisions[6]
         choice = random.choice([
-            decisions[1], decisions[2], decisions[3], decisions[4]
+            decisions[2], decisions[3], decisions[4] ,decisions[5]
         ])
         return choice
 
