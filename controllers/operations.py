@@ -121,7 +121,7 @@ class BaseOps:
         today = datetime.combine(date.today(), datetime.min.time())
         data_doc = self.post_model.collection.find(
             {"$and": [
-                {"information_service_tag": None},
+                {"information_service_tag": inteligence_service_category},
                 {"created_at": {"$gt": today - timedelta(days=day_limit)}},
                 {"created_at": {"$lte": today}},
                 {"category": category},
@@ -362,24 +362,85 @@ class BaseOps:
             3: "تحریک کارکنان و تشویش اذهان آنها",
             4: "بزرگنمایی مشکلات مدیریتی و اعتمادزدایی",
             5: "بزرگنمایی تضادها و اختلاف ها",
-            6: "اقدام خودی"
+            6: "اقدام خودی",
+            7: "نامشخص"
         }
         decisions_makes = []
         valid_categories = [
+            "اقتصادی",
+            "بین الملل",
             "اجتماعی",
             "سیاسی",
-            "اقتصادی"
         ]
-        if not category:
-            return None
-        if category == valid_categories[2]:
-            return decisions[1]
-        if sentiment in ['positive', "very positive", "mixed"]:
-            return decisions[6]
-        choice = random.choice([
-            decisions[2], decisions[3], decisions[4] ,decisions[5]
-        ])
-        return choice
+        khodi_list = [
+            "نیرو","شهید","فرمانده",
+            "نزاجا","نهاجا","نداجا",
+            "زمینی","هوایی","دریایی",
+            "دفاع","شناور","یگان",
+        ]
+        modiriati = [
+            "مدیر","مسئول","معاول",
+            "رئیس","کمیسیون","پارلمان"
+        ]
+        naresayei = [
+            "پول","مال","هزینه",
+            "مسکن","خونه","اجاره",
+            "سند","سازمان",
+        ]
+        tahrik = [
+            "آزادی","اعتراض","تحریک"
+            "خامنه","اعتراض","تحریک"
+        ]
+        tazad = [
+            "آخوند","عرزشی","ارزشی"
+            "بسیجی","مزدور","خرزشی"
+        ]
+        eteghadi = [
+            "حجاب","دین","اسلام"
+            "حجاب","امام","امام"
+        ]
+        
+        if category in valid_categories:
+            for item in khodi_list:
+                if item in caption:
+                    return decisions[6]
+                
+            for item in modiriati:
+                if item in caption:
+                    return decisions[4]
+            
+                
+            for item in naresayei:
+                if item in caption:
+                    return decisions[1]
+            
+                
+            for item in tahrik:
+                if item in caption:
+                    return decisions[3]
+            
+                
+            for item in tazad:
+                if item in caption:
+                    return decisions[5]
+            
+                
+            for item in eteghadi:
+                if item in caption:
+                    return decisions[2]
+            
+
+            if category == valid_categories[0]:
+                return random.choice(
+                    [decisions[1], decisions[4] ])
+            if sentiment in ['positive', "very positive", "mixed"] :
+                return decisions[6]
+            choice = random.choice([
+                decisions[2], decisions[3],decisions[5]
+            ])
+            return choice
+        else:
+            return "نامشخص"
 
     def generate_word_frequencies(self, days_ago=30):
         delta_blow = datetime.now() - timedelta(days=days_ago)
