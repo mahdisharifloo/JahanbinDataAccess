@@ -127,6 +127,7 @@ class BaseOps:
                     {"created_at": {"$gt": today - timedelta(days=day_limit)}},
                     {"created_at": {"$lte": today}},
                     {"category": {"$in":["اقتصادی","بین الملل","اجتماعی","سیاسی"]}},
+                    {"information_service_tag": {"$ne":"اقدام خودی"}},
                     {"clean_context": {"$nin": [None, [], ""]}},
                 ]}).sort('created_at', pymongo.DESCENDING).limit(1)
             data = [doc for doc in data_doc]
