@@ -119,6 +119,21 @@ class BaseOps:
         if time_filtering == "1y":
             day_limit = 360
         today = datetime.combine(date.today(), datetime.min.time())
+        if inteligence_service_category == "unknown":
+            day_limit = 30
+            data_doc = self.post_model.collection.find(
+                {"$and": [
+                    {"manual_information_service_tag": None},
+                    {"created_at": {"$gt": today - timedelta(days=day_limit)}},
+                    {"created_at": {"$lte": today}},
+                    {"category": {"$in":["اقتصادی","بین الملل","اجتماعی","سیاسی"]}},
+                    {"clean_context": {"$nin": [None, [], ""]}},
+                ]}).sort('created_at', pymongo.DESCENDING).limit(1)
+            data = [doc for doc in data_doc]
+            for d in data:
+                d['_id'] = str(d['_id'])
+            return data
+        
         data_doc = self.post_model.collection.find(
             {"$and": [
                 {"information_service_tag": inteligence_service_category},
@@ -146,7 +161,7 @@ class BaseOps:
 
     def add_info_service_tag(self, record_id, label):
         query = {"_id": ObjectId(record_id)}
-        data = {'information_service_tag': label}
+        data = {'manual_information_service_tag': brian_mission[label]}
         self.post_model.update(query, data)
         return True
 
